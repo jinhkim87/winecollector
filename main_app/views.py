@@ -1,5 +1,9 @@
 from django.shortcuts import render, redirect
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Wine, Food, Photo
 from .forms import YearForm
 
@@ -19,9 +23,11 @@ def home(request):
 def about(request):
     return render(request, 'about.html')
 
+@login_required
 def wines_index(request):
-    wines = Wine.objects.all() 
+    wines = Wine.objects.filter(user=request.user)
     return render(request, 'wines/index.html', { 'wines': wines })
+
 
 def wines_detail(request, wine_id):
     wine = Wine.objects.get(id=wine_id)
@@ -41,10 +47,15 @@ def add_year(request, wine_id):
         new_year.save()
     return redirect('detail', wine_id=wine_id)
 
-class WineCreate(CreateView):
+class WineCreate(LoginRequiredMixin, CreateView):
     model = Wine
     fields = ['name', 'winetype', 'cost']
     success_url = '/wines/'
+    def form_valid(self, form):
+    # Assign the logged in user (self.request.user)
+        form.instance.user = self.request.user  # form.instance is the wine
+    # Let the CreateView do its job as usual
+        return super().form_valid(form)
 
 class WineUpdate(UpdateView):
     model = Wine
@@ -97,3 +108,22 @@ def add_photo(request, wine_id):
         except:
             print('An error occurred uploading file to S3')
     return redirect('detail', wine_id=wine_id)
+
+def signup(request):
+    error_message = ''
+    if request.method == 'POST':
+        # This is how to create a 'user' form object
+        # that includes the data from the browser
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            # This will add the user to the database
+            user = form.save()
+            # This is how we log a user in via code
+            login(request, user)
+            return redirect('index')
+        else:
+            error_message = 'Invalid sign up - try again'
+    # A bad POST or a GET request, so render signup.html with an empty form
+    form = UserCreationForm()
+    context = {'form': form, 'error_message': error_message}
+    return render(request, 'registration/signup.html', context)

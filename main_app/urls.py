@@ -13,4 +13,5 @@ urlpatterns = [
     path('wines/<int:wine_id>/assoc_food/<int:food_id>', views.assoc_food, name='assoc_food'),
     path('wines/<int:wine_id>/remove_food/<int:food_id>', views.remove_food, name='remove_food'),
     path('wines/<int:wine_id>/add_photo/', views.add_photo, name='add_photo'),
+    path('accounts/signup/', views.signup, name='signup'),
 ] 
